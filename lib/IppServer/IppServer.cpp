@@ -3,6 +3,7 @@
  * @brief Minimal IPP Everywhere server (HTTP/1.1 transport, operations, mDNS upkeep).
  */
 #include "IppServer.h"
+#include "TaskUtil.h"
 
 #include <Arduino.h>
 
@@ -397,7 +398,7 @@ bool IppServer::begin(PrinterRegistry *registry, JobQueue *jobs, ConfigManager *
 
 bool IppServer::startTask(UBaseType_t priority, BaseType_t core, uint32_t stackSize)
 {
-    return xTaskCreatePinnedToCore(taskEntry, "ipp", stackSize, this, priority, &task_, core) == pdPASS;
+    return taskutil::create(taskEntry, "ipp", stackSize, this, priority, &task_, core);
 }
 
 void IppServer::taskEntry(void *arg)

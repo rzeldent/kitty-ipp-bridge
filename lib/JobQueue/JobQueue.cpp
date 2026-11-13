@@ -3,6 +3,7 @@
  * @brief Implementation of the FreeRTOS print queue and worker task.
  */
 #include "JobQueue.h"
+#include "TaskUtil.h"
 
 #include <Arduino.h>
 
@@ -84,7 +85,7 @@ bool JobQueue::startTask(UBaseType_t priority, BaseType_t core, uint32_t stackSi
 {
     if (!queue_)
         return false;
-    return xTaskCreatePinnedToCore(taskEntry, "job_worker", stackSize, this, priority, &task_, core) == pdPASS;
+    return taskutil::create(taskEntry, "job_worker", stackSize, this, priority, &task_, core);
 }
 
 void JobQueue::addListener(Listener listener)

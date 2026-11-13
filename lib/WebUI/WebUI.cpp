@@ -3,6 +3,7 @@
  * @brief Web dashboard and REST API implementation.
  */
 #include "WebUI.h"
+#include "TaskUtil.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -247,7 +248,7 @@ bool WebUI::begin(const Context &context, uint16_t port)
 
 bool WebUI::startTask(UBaseType_t priority, BaseType_t core, uint32_t stackSize)
 {
-    return xTaskCreatePinnedToCore(taskEntry, "web_ui", stackSize, this, priority, &task_, core) == pdPASS;
+    return taskutil::create(taskEntry, "web_ui", stackSize, this, priority, &task_, core);
 }
 
 void WebUI::post(const UiEvent &event)

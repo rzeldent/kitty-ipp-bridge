@@ -1,4 +1,5 @@
 #include "BleDiscovery.h"
+#include "TaskUtil.h"
 
 #include <NimBLEDevice.h>
 
@@ -68,7 +69,7 @@ bool BleDiscovery::startTask(UBaseType_t priority, BaseType_t core, uint32_t sta
 {
     if (task_)
         return true;
-    return xTaskCreatePinnedToCore(taskEntry, "ble_scan", stackSize, this, priority, &task_, core) == pdPASS;
+    return taskutil::create(taskEntry, "ble_scan", stackSize, this, priority, &task_, core);
 }
 
 bool BleDiscovery::receive(DiscoveryEvent &event, TickType_t ticks)

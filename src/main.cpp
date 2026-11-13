@@ -14,6 +14,8 @@
  * | monitor       | main.cpp         | 0    | 1    | Heap monitoring, Wi-Fi supervision               |
  * | async_tcp     | AsyncTCP library | -    | -    | Serves the REST API / dashboard                  |
  *
+ * On single-core targets (ESP32-C3) all tasks run on core 0 (see TaskUtil.h).
+ *
  * See docs/ARCHITECTURE.md for diagrams.
  */
 #include <Arduino.h>
@@ -30,6 +32,7 @@
 #include "PrinterProfile.h"
 #include "PrinterRegistry.h"
 #include "SystemStats.h"
+#include "TaskUtil.h"
 #include "Watchdog.h"
 #include "WebUI.h"
 
@@ -299,7 +302,7 @@ void setup()
     if (!gDiscovery.begin(discoverySettings(bridge)) || !gDiscovery.startTask())
         LOG_E(TAG, "BLE discovery failed to start");
 
-    if (xTaskCreatePinnedToCore(registryTask, "registry", 4096, nullptr, 2, nullptr, 1) != pdPASS)
+    if (!taskutil::create(registryTask, "registry", 4096, nullptr, 2, nullptr, 1))
         LOG_E(TAG, "Registry task failed to start");
 
     // ---- Print queue ---------------------------------------------------------
@@ -325,7 +328,7 @@ void setup()
     if (!gWeb.begin(ctx, ipp.httpPort) || !gWeb.startTask())
         LOG_E(TAG, "Web UI failed to start");
 
-    if (xTaskCreatePinnedToCore(monitorTask, "monitor", 4096, nullptr, 1, nullptr, 0) != pdPASS)
+    if (!taskutil::create(monitorTask, "monitor", 4096, nullptr, 1, nullptr, 0))
         LOG_E(TAG, "Monitor task failed to start");
 
     LOG_I(TAG, "Bridge ready: http://%s.local/  ipp://%s.local:%u/ipp/print", gHostname.c_str(), gHostname.c_str(),
