@@ -17,6 +17,7 @@
 #include "IppMessage.h"
 #include "MonoBitmap.h"
 #include "MonoRasterizer.h"
+#include "PwgJobConverter.h"
 #include "PwgRasterDecoder.h"
 #include "TextRenderer.h"
 
@@ -394,6 +395,57 @@ static void test_rasterizer_dither_midgray()
     TEST_ASSERT_TRUE(ratio > 0.40 && ratio < 0.60);
 }
 
+
+static std::vector<uint8_t> blackPages(uint32_t pages, uint32_t w, uint32_t h)
+{
+    std::vector<uint8_t> s = {'R', 'a', 'S', '2'};
+    for (uint32_t p = 0; p < pages; ++p)
+    {
+        auto hdr = pwgHeader(w, h, 8, 8, raster::CSPACE_SW);
+        s.insert(s.end(), hdr.begin(), hdr.end());
+        // first line + (h-1) repeats, all pixels black (w <= 128*... use runs of 128)
+        s.push_back(static_cast<uint8_t>(h - 1));
+        for (uint32_t x = 0; x < w; x += 128)
+        {
+            const uint32_t n = std::min<uint32_t>(128, w - x);
+            s.push_back(static_cast<uint8_t>(n - 1));
+            s.push_back(0x00);
+        }
+    }
+    return s;
+}
+
+static void test_converter_multi_page()
+{
+    raster::PwgJobConverter::Options opt;
+    raster::PwgJobConverter conv(opt);
+    auto doc = blackPages(2, 768, 40);
+    for (size_t i = 0; i < doc.size(); i += 100)
+        TEST_ASSERT_TRUE(conv.feed(doc.data() + i, std::min<size_t>(100, doc.size() - i)));
+    TEST_ASSERT_TRUE(conv.finish());
+    TEST_ASSERT_EQUAL(2, conv.pages());
+    TEST_ASSERT_EQUAL(20 + opt.pageGapRows + 20, conv.bitmap().height);
+    TEST_ASSERT_EQUAL_HEX8(0xFF, conv.bitmap().row(0)[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x00, conv.bitmap().row(25)[0]);
+}
+
+static void test_converter_budget_and_errors()
+{
+    raster::PwgJobConverter::Options opt;
+    opt.maxOutputBytes = 48 * 10;
+    raster::PwgJobConverter conv(opt);
+    auto doc = blackPages(1, 384, 100);
+    TEST_ASSERT_FALSE(conv.feed(doc.data(), doc.size()));
+    TEST_ASSERT_TRUE(conv.overBudget());
+    TEST_ASSERT_FALSE(conv.finish());
+
+    raster::PwgJobConverter empty(raster::PwgJobConverter::Options{});
+    const uint8_t sync[] = {'R', 'a', 'S', '2'};
+    TEST_ASSERT_TRUE(empty.feed(sync, sizeof(sync)));
+    TEST_ASSERT_FALSE(empty.finish());
+    TEST_ASSERT_FALSE(empty.error().empty());
+}
+
 static void test_identify_page()
 {
     raster::MonoBitmap bmp = raster::buildIdentifyPage("Desk Label Printer", "aa:bb:cc:dd:ee:ff");
@@ -429,6 +481,8 @@ int main(int, char **)
     RUN_TEST(test_rasterizer_downscale_black);
     RUN_TEST(test_rasterizer_trims_blank_rows);
     RUN_TEST(test_rasterizer_dither_midgray);
+    RUN_TEST(test_converter_multi_page);
+    RUN_TEST(test_converter_budget_and_errors);
     RUN_TEST(test_identify_page);
     return UNITY_END();
 }

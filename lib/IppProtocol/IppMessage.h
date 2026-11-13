@@ -32,6 +32,7 @@ namespace ipp
         OP_GET_JOB_ATTRIBUTES = 0x0009,
         OP_GET_JOBS = 0x000A,
         OP_GET_PRINTER_ATTRIBUTES = 0x000B,
+        OP_IDENTIFY_PRINTER = 0x003C, ///< PWG 5100.13: make the printer identify itself
     };
 
     // ---- Status codes ------------------------------------------------------

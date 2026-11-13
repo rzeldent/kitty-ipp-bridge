@@ -315,6 +315,8 @@ namespace ipp
             return "Get-Jobs";
         case OP_GET_PRINTER_ATTRIBUTES:
             return "Get-Printer-Attributes";
+        case OP_IDENTIFY_PRINTER:
+            return "Identify-Printer";
         default:
             return "Unknown";
         }
